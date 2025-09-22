@@ -97,6 +97,31 @@ Python developer! 🐍 **Часть 1: Основы бэкенда**
 - Каждый сервис = отдельный модуль с определённым функционалом
 - Общение через API или события
 
+```mermaid
+graph TD
+    A[🌐 Client] --> B[⚖️ Load Balancer]
+    B --> C[🔍 Search Service]
+    B --> D[👤 User Service]
+    B --> E[🛒 Order Service]
+    B --> F[💳 Payment Service]
+    
+    C --> G[🔍 Search DB]
+    D --> H[👥 User DB]
+    E --> I[📦 Order DB]
+    F --> J[💰 Payment DB]
+    
+    E --> K[📨 Message Queue]
+    F --> K
+    K --> L[📧 Notification Service]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+    style F fill:#f1f8e9
+```
+
 **Плюсы микросервисов:** ✅
 - Гибкость технологий (один сервис на Python, другой на Go)
 - Легче масштабировать отдельные части
@@ -111,6 +136,28 @@ Python developer! 🐍 **Часть 1: Основы бэкенда**
 ### 🔧 Консистентность данных между микросервисами
 
 **Проблема:** Как синхронизировать данные между сервисами?
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant UserService
+    participant OrderService
+    participant PaymentService
+    participant MessageQueue
+    participant NotificationService
+    
+    Client->>UserService: Create Account
+    UserService->>MessageQueue: user.created event
+    MessageQueue->>OrderService: Process user.created
+    MessageQueue->>PaymentService: Setup payment profile
+    
+    Client->>OrderService: Place Order
+    OrderService->>MessageQueue: order.created event
+    MessageQueue->>PaymentService: Process payment
+    PaymentService->>MessageQueue: payment.completed event
+    MessageQueue->>NotificationService: Send confirmation
+    NotificationService->>Client: Email/SMS notification
+```
 
 **Решения:**
 1. **Eventual Consistency** - данные станут консистентными "со временем"
@@ -202,6 +249,33 @@ response = requests.get('https://example.com/api/users',
 ### 🚀 HTTP/3 и QUIC (Новинка 2025!)
 
 > **📊 Факт:** По данным Cloudflare, в 2025 году уже 70% web-трафика использует HTTP/3
+
+```mermaid
+graph LR
+    subgraph "HTTP/1.1"
+        A1[Request 1] --> B1[Response 1]
+        A2[Request 2] --> B2[Response 2]
+        A3[Request 3] --> B3[Response 3]
+    end
+    
+    subgraph "HTTP/2"
+        A4[Request 1] --> B4[Response 1]
+        A5[Request 2] --> B5[Response 2]
+        A6[Request 3] --> B6[Response 3]
+    end
+    
+    subgraph "HTTP/3 + QUIC"
+        A7[Request 1] -.-> B7[Response 1]
+        A8[Request 2] -.-> B8[Response 2]
+        A9[Request 3] -.-> B9[Response 3]
+        Q[🚀 QUIC Layer<br/>UDP Based]
+    end
+    
+    style A7 fill:#e8f5e8
+    style A8 fill:#e8f5e8
+    style A9 fill:#e8f5e8
+    style Q fill:#fff3e0
+```
 
 **HTTP/3 преимущества:**
 - **Быстрее:** 0-RTT соединения
@@ -532,6 +606,77 @@ def is_even(n):
 
 **Сценарий:** Black Friday, 1 млрд запросов/день, пиковая нагрузка 50,000 RPS
 
+```mermaid
+graph TB
+    subgraph "🌍 Global Edge"
+        CDN[☁️ CDN<br/>Cloudflare]
+        WAF[🛡️ WAF<br/>DDoS Protection]
+    end
+    
+    subgraph "⚖️ Load Balancing"
+        GLB[🌐 Global LB]
+        RLB1[🔄 Regional LB US]
+        RLB2[🔄 Regional LB EU]
+        RLB3[🔄 Regional LB ASIA]
+    end
+    
+    subgraph "🔥 API Gateway"
+        AG1[🚪 Gateway US]
+        AG2[🚪 Gateway EU]
+        AG3[🚪 Gateway ASIA]
+    end
+    
+    subgraph "🎯 Microservices"
+        CAT[📚 Catalog Service]
+        INV[📦 Inventory Service]
+        ORD[🛒 Order Service]
+        PAY[💳 Payment Service]
+        USER[👤 User Service]
+    end
+    
+    subgraph "💾 Data Layer"
+        REDIS[⚡ Redis Cluster]
+        PGMAIN[🐘 PostgreSQL Master]
+        PGREP[🐘 PG Read Replicas]
+        MONGO[🍃 MongoDB Cluster]
+    end
+    
+    subgraph "📨 Message Queue"
+        KAFKA[📡 Kafka Cluster]
+        RABBIT[🐰 RabbitMQ]
+    end
+    
+    CDN --> WAF
+    WAF --> GLB
+    GLB --> RLB1
+    GLB --> RLB2
+    GLB --> RLB3
+    
+    RLB1 --> AG1
+    RLB2 --> AG2
+    RLB3 --> AG3
+    
+    AG1 --> CAT
+    AG1 --> INV
+    AG1 --> ORD
+    AG1 --> PAY
+    AG1 --> USER
+    
+    CAT --> REDIS
+    CAT --> PGREP
+    INV --> PGMAIN
+    ORD --> KAFKA
+    PAY --> MONGO
+    USER --> REDIS
+    
+    ORD --> RABBIT
+    PAY --> RABBIT
+    
+    style CDN fill:#e3f2fd
+    style REDIS fill:#fff3e0
+    style KAFKA fill:#f3e5f5
+```
+
 **Trade-offs с метриками:**
 
 | Подход | Latency | Consistency | Cost | Complexity |
@@ -669,6 +814,43 @@ INFRASTRUCTURE_CONFIG = {
 
 **Сценарий:** Banking system, 10M транзакций/день, zero tolerance для data loss
 
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant TxCoordinator as 2PC Coordinator
+    participant AccountDB
+    participant AuditDB
+    participant Queue
+    
+    Note over Client,Queue: Money Transfer: $1000 from A to B
+    
+    Client->>API: Transfer Request
+    API->>TxCoordinator: Start Transaction
+    
+    Note over TxCoordinator: Phase 1: PREPARE
+    TxCoordinator->>AccountDB: PREPARE debit A ($1000)
+    AccountDB-->>TxCoordinator: VOTE-COMMIT
+    TxCoordinator->>AccountDB: PREPARE credit B ($1000)
+    AccountDB-->>TxCoordinator: VOTE-COMMIT
+    TxCoordinator->>AuditDB: PREPARE log entry
+    AuditDB-->>TxCoordinator: VOTE-COMMIT
+    
+    Note over TxCoordinator: Phase 2: COMMIT
+    TxCoordinator->>AccountDB: COMMIT debit A
+    AccountDB-->>TxCoordinator: ACK
+    TxCoordinator->>AccountDB: COMMIT credit B
+    AccountDB-->>TxCoordinator: ACK
+    TxCoordinator->>AuditDB: COMMIT log
+    AuditDB-->>TxCoordinator: ACK
+    
+    TxCoordinator->>Queue: Async notification
+    TxCoordinator->>API: Transaction SUCCESS
+    API->>Client: Transfer Complete
+    
+    Note over Queue: Eventual notification processing
+```
+
 **Critical Trade-offs:**
 
 | Метрика | Synchronous 2PC | Async + Saga | Event Sourcing |
@@ -800,6 +982,59 @@ BANKING_METRICS = {
 ### 3. 📱 **Social Media: Как построить timeline для 500M пользователей?**
 
 **Сценарий:** Instagram-like app, 500M users, 10B posts/day
+
+```mermaid
+flowchart TD
+    subgraph "📝 Content Creation"
+        U1[👤 Regular User<br/><1K followers] 
+        U2[🌟 Influencer<br/>1K-100K followers]
+        U3[⭐ Celebrity<br/>>100K followers]
+    end
+    
+    subgraph "🔄 Fan-out Strategy"
+        PUSH[📤 PUSH Model<br/>Immediate delivery]
+        HYBRID[🔀 HYBRID Model<br/>Smart delivery]
+        PULL[📥 PULL Model<br/>On-demand fetch]
+    end
+    
+    subgraph "💾 Storage Layer"
+        TL[📋 Timeline Cache<br/>Redis]
+        UDB[👥 User Graph DB<br/>Neo4j]
+        PDB[📝 Posts DB<br/>Cassandra]
+        IDX[🔍 Celebrity Index<br/>Elasticsearch]
+    end
+    
+    subgraph "⚡ Delivery"
+        F1[👥 Followers<br/>Timeline Ready]
+        F2[⏳ Active Users<br/>Pre-computed]
+        F3[🔗 Lazy Loading<br/>Real-time fetch]
+    end
+    
+    U1 -->|Post| PUSH
+    U2 -->|Post| HYBRID  
+    U3 -->|Post| PULL
+    
+    PUSH --> TL
+    PUSH --> F1
+    
+    HYBRID --> TL
+    HYBRID --> F2
+    HYBRID --> IDX
+    
+    PULL --> IDX
+    PULL --> F3
+    
+    TL -.-> F1
+    UDB -.-> F2
+    PDB -.-> F3
+    
+    style U1 fill:#e8f5e8
+    style U2 fill:#fff3e0
+    style U3 fill:#fce4ec
+    style PUSH fill:#e1f5fe
+    style HYBRID fill:#f3e5f5
+    style PULL fill:#f1f8e9
+```
 
 **Архитектурные подходы:**
 
